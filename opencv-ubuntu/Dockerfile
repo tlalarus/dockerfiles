@@ -1,11 +1,12 @@
 # base image
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM ${BASE_IMAGE} as base
 
 LABEL maintainer="iamsimmk@gmail.com"
 LABEL description="Opencv installed ubuntu image"
-ARG OPENCV_VERSION=4.8.1
-ARG CMAKE_VERSION=3.24.4
+
+ARG OPENCV_VERSION=4.6.0
+ARG CMAKE_VERSION=3.20.4
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -13,6 +14,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN sed -i 's/kr.archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
 RUN sed -i 's/security.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
 RUN sed -i 's/extras.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
+
+
 
 # install dependency
 WORKDIR /dependencies
@@ -24,6 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libboost-all-dev \
         unzip \
         libjpeg-dev libpng-dev \
+        qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins \
         apt-utils \
         x11-apps \
         fonts-nanum \
@@ -41,7 +45,9 @@ RUN cd /tmp && \
 # Opencv
 WORKDIR /tmp/opencv_build
 RUN wget --no-check-certificate https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSION}.zip && \
+    wget -O opencv_contrib-${OPENCV_VERSION}.zip --no-check-certificate https://github.com/opencv/opencv_contrib/archive/refs/tags/${OPENCV_VERSION}.zip && \
     unzip ${OPENCV_VERSION}.zip && \
+    unzip opencv_contrib-${OPENCV_VERSION}.zip && \
     rm ${OPENCV_VERSION}.zip && cd opencv-${OPENCV_VERSION} && \
     mkdir build && cd build && \
     cmake \
@@ -53,15 +59,12 @@ RUN wget --no-check-certificate https://github.com/opencv/opencv/archive/refs/ta
         -DBUILD-EXAMPLES=OFF \
         -DBUILD_opencv_apps=OFF \
         -DENABLE_PRECOMPILED_HEADERS=OFF \
+        -DENABLE_CXX11=ON \
         -DOPENCV_GENERATE_PKGCONFIG=ON \
-        -DWITH_QT=OFF .. && \
+        -DOPENCV_EXTRA_MODULES_PATH=/tmp/opencv_build/opencv_contrib-${OPENCV_VERSION}/modules \
+        -DWITH_GTK=OFF \
+        -DWITH_QT=ON .. && \
     make -j"$(nproc)" && make install && \
     sh -c 'echo '/usr/local/lib' > /etc/ld.so.conf.d/opencv.conf' && \
     ldconfig && \
     rm -rf /tmp/opencv_build
-
-
-
-
-
-
